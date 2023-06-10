@@ -9,32 +9,10 @@
 
 """Implementation of the PDDL domain parser."""
 import sys
-from typing import AbstractSet, Dict, List, Mapping, Optional, Sequence, Set, Tuple
-
-from lark import Lark, ParseError, Transformer
-from lark.visitors import merge_transformers
+from lark import Lark
 from pddl.app_problem import APPProblem, Transition
-from pddl.constants import EITHER
-from pddl.core import Action, Domain, Requirements
-from pddl.exceptions import PDDLMissingRequirementError, PDDLParsingError
-from pddl.helpers.base import assert_, safe_index
-from pddl.logic.base import (
-    And,
-    ExistsCondition,
-    FalseFormula,
-    ForallCondition,
-    Imply,
-    Not,
-    OneOf,
-    Or,
-)
-from pddl.logic.effects import AndEffect, Forall, When
-from pddl.logic.predicates import DerivedPredicate, EqualTo, Predicate
-from pddl.logic.terms import Constant, Variable
 from pddl.parser import APP_GRAMMAR_FILE, PARSERS_DIRECTORY
-from pddl.parser.domain import DomainParser, DomainTransformer
-from pddl.parser.problem import ProblemParser, ProblemTransformer
-from pddl.parser.symbols import Symbols
+from pddl.parser.problem import ProblemTransformer
 
 
 class APPTransformer(ProblemTransformer):
