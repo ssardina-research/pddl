@@ -13,6 +13,7 @@ from typing import AbstractSet, Dict, List, Mapping, Optional, Sequence, Set, Tu
 
 from lark import Lark, ParseError, Transformer
 from lark.visitors import merge_transformers
+from pddl.app_problem import APPProblem, Transition
 from pddl.constants import EITHER
 from pddl.core import Action, Domain, Requirements
 from pddl.exceptions import PDDLMissingRequirementError, PDDLParsingError
@@ -49,17 +50,34 @@ class APPTransformer(ProblemTransformer):
         return args[0]
     
     def problem(self, args):
-        pass
+        return APPProblem(**dict(args[2:-1]))
+
+    def source(self, args):
+        """ Process transition source rule """
+        return "source", args[0]
+
+    def target(self, args):
+        """ Process transition target rule """
+        return "target", args[0]
 
     def transitions(self, args):
-        """Process the 'object' rule."""
-        pass
+        """Process the 'transitions' rule."""
+        return "transitions", args[2:-1]
+
+    def transition(self, args):
+        source = args[1][1]
+        target = args[2][1]
+        goal = args[3][1]
+        return Transition(source=source, target=target, goal=goal)
     
     def init_app(self, args):
-        """Process the 'init' rule."""
+        """Process the 'init-app' rule."""
         return "init_app", args[2]
     
-
+    def app_problem_def(self, args):
+        """Process the 'app_problem_def' rule."""
+        return "name", args[2]
+    
 
 _app_parser_lark = APP_GRAMMAR_FILE.read_text()
 
@@ -69,7 +87,8 @@ class APPParser:
 
     def __init__(self):
         """Initialize."""
-        self._transformer = merge_transformers(APPTransformer(), domain=DomainTransformer(), problem=ProblemTransformer())
+        self._transformer = APPTransformer()
+        # self._transformer = merge_transformers(APPTransformer(), domain=DomainTransformer(), problem=ProblemTransformer())
         self._parser = Lark(
             _app_parser_lark, parser="lalr", import_paths=[PARSERS_DIRECTORY]
         )
@@ -87,7 +106,5 @@ if __name__ == "__main__":
     file = sys.argv[1]
     with open(file, "r") as f:
         ptext = f.read()
-    # app = DomainParser()(ptext)
     app = APPParser()(ptext)
     print(app)
-    # ProblemParser()(ptext)

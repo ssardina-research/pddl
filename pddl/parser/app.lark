@@ -1,7 +1,5 @@
-start: app
+start: problem
 
-// Agent Planning Problem
-app:                    domain problem
 
 // We extend the problem grammar by allowing for APP tokens
 %extend problem:        LPAR DEFINE app_problem_def problem_domain [objects] init init_app transitions RPAR
@@ -10,16 +8,21 @@ app:                    domain problem
 app_problem_def:        LPAR APP_PROBLEM NAME RPAR
 init_app:               LPAR INIT_APP NAME RPAR
 transitions:            LPAR TRANSITIONS transition+ RPAR
-transition:             LPAR NAME NAME goal RPAR
+transition:             LPAR source target goal RPAR
+source: NAME
+target: NAME
 INIT_APP:               ":init-app"
 TRANSITIONS:            ":transitions"
 APP_PROBLEM:            "planprog"
 
-
 %ignore /\s+/
 %ignore COMMENT
 
-%import .domain.domain -> domain
+%import .problem.gd_name -> gd_name
+%import .problem.literal_name -> literal_name
+%import .problem.atomic_formula_name -> atomic_formula_name
+%import .problem.predicate -> predicate
+%import .problem.typed_list_name -> typed_list_name
 %import .problem.problem -> problem
 %import .problem.objects -> objects
 %import .problem.goal -> goal
