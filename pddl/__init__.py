@@ -42,3 +42,10 @@ def parse_problem(fn):
     with open(fn, "r") as f:
         ptext = f.read()
     return ProblemParser()(ptext)
+
+def parse_app_problem(fn):
+    from pddl.parser.app import APPParser
+
+    with open(fn, "r") as f:
+        ptext = f.read()
+    return APPParser()(ptext)
