@@ -68,12 +68,33 @@ def _print_types_with_parents(types: Dict[name, Optional[name]]):
     return result.strip()
 
 
-def _print_objects_with_types(objects: Collection):
+def _print_objects_constants_with_types(objects: Collection):
     result = ""
+
+    # types = set.union(*[o.type_tags for o in objects if o.type_tags])
+    types_obj = {}
     for o in sorted(objects):
-        result += f"{o.name} - {' '.join(o.type_tags)}" if o.type_tags else f"{o.name}"
-        result += " "
+        if o.type_tags:
+            for t in o.type_tags:
+                    types_obj[t] = types_obj.get(t, []) + [o.name]
+        else:
+            types_obj["object"] = types_obj.get("object", []) + [o.name]
+    for t in sorted(types_obj):
+        result += f"\n\t{' '.join(types_obj[t])} - {t}"
+        # result += "\n"
+
+
+    # for o in sorted(objects):
+    #     result += f"{o.name} - {' '.join(o.type_tags)}" if o.type_tags else f"{o.name}"
+    #     result += " "
     return result.strip()
+
+# def _print_objects_constants_with_types(objs_consts: Collection):
+#     result = ""
+#     for o in sorted(objs_consts):
+#         result += f"{o.name} - {' '.join(o.type_tags)}" if o.type_tags else f"{o.name}"
+#         result += " "
+#     return result.strip()
 
 
 def domain_to_string(domain: Domain) -> str:
@@ -83,7 +104,7 @@ def domain_to_string(domain: Domain) -> str:
     indentation = " " * 4
     body += _sort_and_print_collection("(:requirements ", domain.requirements, ")\n")
     body += f"(:types {_print_types_with_parents(domain.types)})\n"
-    body += _sort_and_print_collection("(:constants ", domain.constants, ")\n")
+    body += f"(:constants {_print_objects_constants_with_types(domain.constants)})\n"
     body += f"(:predicates {_print_predicates_with_types(domain.predicates)})\n"
     body += _sort_and_print_collection(
         "",
@@ -108,7 +129,7 @@ def problem_to_string(problem: Problem) -> str:
     body = f"(:domain {problem.domain_name})\n"
     indentation = " " * 4
     body += _sort_and_print_collection("(:requirements ", problem.requirements, ")\n")
-    body += f"(:objects {_print_objects_with_types(problem.objects)})\n"
+    body += f"(:objects {_print_objects_constants_with_types(problem.objects)})\n"
     body += _sort_and_print_collection("(:init ", problem.init, ")\n")
     body += f"{'(:goal ' + str(problem.goal) + ')'}\n" if problem.goal != TRUE else ""
     result = result + "\n" + indent(body, indentation) + "\n)"
