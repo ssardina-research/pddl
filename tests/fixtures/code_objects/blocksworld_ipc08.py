@@ -13,11 +13,13 @@
 """This test module contains the fixtures for 'blocksworld-ipc08' domain and problem."""
 import pytest
 
-from pddl.core import Action, Domain, Problem, Requirements
+from pddl.action import Action
+from pddl.core import Domain, Problem
 from pddl.logic.base import And, OneOf
 from pddl.logic.effects import AndEffect
 from pddl.logic.helpers import constants, variables
 from pddl.logic.predicates import EqualTo, Predicate
+from pddl.requirements import Requirements
 
 
 @pytest.fixture(scope="session")

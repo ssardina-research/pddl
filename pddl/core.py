@@ -15,28 +15,22 @@ Core module of the package.
 
 It contains the class definitions to build and modify PDDL domains or problems.
 """
-import functools
-from enum import Enum
-from typing import AbstractSet, Collection, Dict, Optional, Sequence, Set, cast
+from typing import AbstractSet, Collection, Dict, Optional, Tuple, cast
 
 from pddl._validation import (
-    _check_constant_types,
-    _check_types_dictionary,
+    TypeChecker,
+    Types,
     _check_types_in_has_terms_objects,
+    validate,
 )
+from pddl.action import Action
 from pddl.custom_types import name as name_type
-from pddl.custom_types import namelike, to_names_types
-from pddl.helpers.base import (
-    _typed_parameters,
-    assert_,
-    ensure,
-    ensure_sequence,
-    ensure_set,
-)
+from pddl.custom_types import namelike, parse_name, to_names, to_types  # noqa: F401
+from pddl.helpers.base import assert_, check, ensure, ensure_set
 from pddl.logic.base import Formula, TrueFormula, is_literal
 from pddl.logic.predicates import DerivedPredicate, Predicate
-from pddl.logic.terms import Constant, Term, Variable
-from pddl.parser.symbols import RequirementSymbols as RS
+from pddl.logic.terms import Constant
+from pddl.requirements import Requirements
 
 
 class Domain:
@@ -66,32 +60,23 @@ class Domain:
         :param derived_predicates: the derived predicates.
         :param actions: the actions.
         """
-        self._name = name_type(name)
+        self._name = parse_name(name)
         self._requirements = ensure_set(requirements)
-        self._types = to_names_types(ensure(types, dict()))
+        self._types = Types(types, self._requirements)
         self._constants = ensure_set(constants)
         self._predicates = ensure_set(predicates)
         self._derived_predicates = ensure_set(derived_predicates)
         self._actions = ensure_set(actions)
 
-        self._all_types_set = self._get_all_types()
-
         self._check_consistency()
-
-    def _get_all_types(self) -> Set[name_type]:
-        """Get all types supported by this domain."""
-        if self._types is None:
-            return set()
-        result = set(self._types.keys()) | set(self._types.values())
-        result.discard(None)
-        return cast(Set[name_type], result)
 
     def _check_consistency(self) -> None:
         """Check consistency of a domain instance object."""
-        _check_types_dictionary(self._types)
-        _check_constant_types(self._constants, self._all_types_set)
-        _check_types_in_has_terms_objects(self._predicates, self._all_types_set)
-        _check_types_in_has_terms_objects(self._actions, self._all_types_set)  # type: ignore
+        checker = TypeChecker(self._types, self.requirements)
+        checker.check_type(self._constants)
+        checker.check_type(self._predicates)
+        checker.check_type(self._actions)
+        _check_types_in_has_terms_objects(self._actions, self._types.all_types)  # type: ignore
         self._check_types_in_derived_predicates()
 
     def _check_types_in_derived_predicates(self) -> None:
@@ -101,10 +86,10 @@ class Domain:
             if self._derived_predicates
             else set()
         )
-        _check_types_in_has_terms_objects(dp_list, self._all_types_set)
+        _check_types_in_has_terms_objects(dp_list, self._types.all_types)
 
     @property
-    def name(self) -> str:
+    def name(self) -> name_type:
         """Get the name."""
         return self._name
 
@@ -136,7 +121,7 @@ class Domain:
     @property
     def types(self) -> Dict[name_type, Optional[name_type]]:
         """Get the type definitions, if defined. Else, raise error."""
-        return self._types
+        return self._types.raw
 
     def __eq__(self, other):
         """Compare with another object."""
@@ -159,7 +144,7 @@ class Problem:
         self,
         name: namelike,
         domain: Optional[Domain] = None,
-        domain_name: Optional[str] = None,
+        domain_name: Optional[namelike] = None,
         requirements: Optional[Collection["Requirements"]] = None,
         objects: Optional[Collection["Constant"]] = None,
         init: Optional[Collection[Formula]] = None,
@@ -176,33 +161,95 @@ class Problem:
         :param init: the initial condition.
         :param goal: the goal condition.
         """
-        self._name = name_type(name)
-        self._domain: Optional[Domain] = domain
-        self._domain_name = name_type(domain_name) if domain_name else None
-        self._requirements: AbstractSet[Requirements] = ensure_set(requirements)
+        self._name = parse_name(name)
+        self._domain: Optional[Domain]
+        self._domain_name: name_type
+        self._domain, self._domain_name = self._parse_domain_and_domain_name(
+            domain, domain_name
+        )
+        self._requirements: Optional[
+            AbstractSet[Requirements]
+        ] = self._parse_requirements(domain, requirements)
         self._objects: AbstractSet[Constant] = ensure_set(objects)
         self._init: AbstractSet[Formula] = ensure_set(init)
         self._goal: Formula = ensure(goal, TrueFormula())
-        assert_(
+        validate(
             all(map(is_literal, self.init)),
             "Not all formulas of initial condition are literals!",
         )
 
         self._check_consistency()
 
-    def _check_consistency(self):
-        assert_(
-            self._domain is not None or self._domain_name is not None,
-            "At least one between 'domain' and 'domain_name' must be set.",
+    def _parse_domain_and_domain_name(
+        self,
+        domain: Optional[Domain],
+        domain_name: Optional[namelike],
+    ) -> Tuple[Optional[Domain], name_type]:
+        """
+        Parse the domain and domain name.
+
+        If the domain is given, use it. Otherwise, take the domain from the domain name.
+        """
+        if domain is not None and domain_name is not None:
+            check(
+                domain.name == domain_name,
+                f"got both domain and domain_name, but domain_name differs: {domain.name} != {domain_name}",
+                exception_cls=ValueError,
+            )
+            return domain, parse_name(domain_name)
+        if domain is not None:
+            return domain, domain.name
+        if domain_name is not None:
+            return None, parse_name(domain_name)
+        raise ValueError("Either domain or domain_name must be given.")
+
+    def _parse_requirements(
+        self,
+        domain: Optional[Domain],
+        requirements: Optional[Collection[Requirements]],
+    ) -> Optional[AbstractSet[Requirements]]:
+        """
+        Parse the requirements.
+
+        If the requirements set is given, use it. Otherwise, take the requirements from the domain.
+        """
+        if requirements is None:
+            return None if domain is None else domain.requirements
+
+        # requirements is not None
+        if domain is None:
+            return set(cast(Collection[Requirements], requirements))
+
+        check(
+            ensure_set(requirements) == domain.requirements,
+            f"got both requirements and domain, but requirements differ: {requirements} != {domain.requirements}",
+            exception_cls=ValueError,
         )
-        assert_(
-            self._domain is None
-            or self._domain_name is None
-            or self._domain.name == self._domain_name
+        return domain.requirements
+
+    def _check_consistency(self) -> None:
+        """Check consistency of the PDDL Problem instance object."""
+        if self._domain is not None:
+            self.check(self._domain)
+
+    def check(self, domain: Domain) -> None:
+        """Check the problem definition against a domain definition."""
+        validate(
+            self.domain_name == domain.name,
+            "Domain names don't match.",
         )
+        validate(
+            self._requirements is None or self._requirements == domain.requirements,
+            "Requirements don't match.",
+        )
+        types = Types(domain.types, domain.requirements, skip_checks=True)  # type: ignore
+        type_checker = TypeChecker(types, domain.requirements)
+        type_checker.check_type(self.objects)
+        type_checker.check_type(self.init)
+        type_checker.check_type(self.goal)
 
     @property
-    def name(self) -> str:
+    def name(self) -> name_type:
         """Get the name."""
         return self._name
 
@@ -215,26 +262,26 @@ class Problem:
     @domain.setter
     def domain(self, domain: Domain) -> None:
         """Set the domain."""
-        if self._domain_name is not None:
-            assert_(
-                self._domain_name == domain.name,
-                f"Domain names don't match. Expected {self._domain_name}, got {domain.name}.",
-            )
+        self._domain_name = domain.name
         self._domain = domain
+        self._check_consistency()
 
     @property
-    def domain_name(self) -> str:
+    def domain_name(self) -> name_type:
         """Get the domain name."""
         if self._domain is not None:
             return self._domain.name
 
         assert_(self._domain_name is not None, "Domain name is not set.")
-        return cast(str, self._domain_name)
+        return cast(name_type, self._domain_name)
 
     @property
     def requirements(self) -> AbstractSet["Requirements"]:
         """Get the requirements."""
-        return self._requirements
+        if self._domain is not None:
+            return self._domain.requirements
+
+        return self._requirements if self._requirements is not None else set()
 
     @property
     def objects(self) -> AbstractSet["Constant"]:
@@ -263,128 +310,3 @@ class Problem:
             and self.init == other.init
             and self.goal == other.goal
         )
-
-
-class Action:
-    """A class for the PDDL Action."""
-
-    def __init__(
-        self,
-        name: namelike,
-        parameters: Sequence[Variable],
-        precondition: Optional[Formula] = None,
-        effect: Optional[Formula] = None,
-    ):
-        """
-        Initialize the action.
-
-        :param name: the action name.
-        :param parameters: the action parameters.
-        :param precondition: the action precondition.
-        :param effect: the action effect.
-        """
-        self._name: str = name_type(name)
-        self._parameters: Sequence[Variable] = ensure_sequence(parameters)
-        self._precondition = precondition
-        self._effect = effect
-
-    @property
-    def name(self) -> str:
-        """Get the name."""
-        return self._name
-
-    @property
-    def parameters(self) -> Sequence[Variable]:
-        """Get the parameters."""
-        return self._parameters
-
-    @property
-    def terms(self) -> Sequence[Term]:
-        """Get the terms."""
-        return self.parameters
-
-    @property
-    def precondition(self) -> Optional[Formula]:
-        """Get the precondition."""
-        return self._precondition
-
-    @property
-    def effect(self) -> Optional[Formula]:
-        """Get the effect."""
-        return self._effect
-
-    def __str__(self):
-        """Get the string."""
-        operator_str = "(:action {0}\n".format(self.name)
-        operator_str += f"    :parameters ({_typed_parameters(self.parameters)})\n"
-        if self.precondition is not None:
-            operator_str += f"    :precondition {str(self.precondition)}\n"
-        if self.effect is not None:
-            operator_str += f"    :effect {str(self.effect)}\n"
-        operator_str += ")"
-        return operator_str
-
-    def __eq__(self, other):
-        """Check equality between two Actions."""
-        return (
-            isinstance(other, Action)
-            and self.name == other.name
-            and self.parameters == other.parameters
-            and self.precondition == other.precondition
-            and self.effect == other.effect
-        )
-
-    def __hash__(self):
-        """Get the hash."""
-        return hash((self.name, self.parameters, self.precondition, self.effect))
-
-    def __repr__(self) -> str:
-        """Get an unambiguous string representation."""
-        return (
-            f"{type(self).__name__}({self.name}, parameters={', '.join(map(str, self.parameters))}, "
-            f"precondition={self.precondition}, effect={self.effect})"
-        )
-
-
-@functools.total_ordering
-class Requirements(Enum):
-    """Enum class for the requirements."""
-
-    STRIPS = RS.STRIPS.strip()
-    TYPING = RS.TYPING.strip()
-    NEG_PRECONDITION = RS.NEG_PRECONDITION.strip()
-    DIS_PRECONDITION = RS.DIS_PRECONDITION.strip()
-    UNIVERSAL_PRECONDITION = RS.UNIVERSAL_PRECONDITION.strip()
-    EXISTENTIAL_PRECONDITION = RS.EXISTENTIAL_PRECONDITION.strip()
-    QUANTIFIED_PRECONDITION = RS.QUANTIFIED_PRECONDITION.strip()
-    EQUALITY = RS.EQUALITY.strip()
-    CONDITIONAL_EFFECTS = RS.CONDITIONAL_EFFECTS.strip()
-    ADL = RS.ADL.strip()
-    DERIVED_PREDICATES = RS.DERIVED_PREDICATES.strip()
-    NON_DETERMINISTIC = RS.NON_DETERMINISTIC.strip()
-
-    @classmethod
-    def strips_requirements(cls) -> Set["Requirements"]:
-        """Get the STRIPS requirements."""
-        return {
-            Requirements.TYPING,
-            Requirements.NEG_PRECONDITION,
-            Requirements.DIS_PRECONDITION,
-            Requirements.EQUALITY,
-            Requirements.CONDITIONAL_EFFECTS,
-        }
-
-    def __str__(self) -> str:
-        """Get the string representation."""
-        return f":{self.value}"
-
-    def __repr__(self) -> str:
-        """Get an unambiguous representation."""
-        return f"Requirements{self.name}"
-
-    def __lt__(self, other):
-        """Compare with another object."""
-        if isinstance(other, Requirements):
-            return self.value <= other.value
-        else:
-            return super().__lt__(other)

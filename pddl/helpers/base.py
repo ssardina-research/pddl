@@ -44,8 +44,15 @@ def assert_(condition: bool, message: str = "") -> None:
         when the code is compiled in optimized mode. For more information, see
         https://bandit.readthedocs.io/en/1.7.5/plugins/b101_assert_used.html
     """
+    check(condition, message=message, exception_cls=AssertionError)
+
+
+def check(
+    condition: bool, message: str = "", exception_cls: Type[Exception] = AssertionError
+) -> None:
+    """Check a condition, and if false, raise exception."""
     if not condition:
-        raise AssertionError(message)
+        raise exception_cls(message)
 
 
 def ensure(arg: Optional[Any], default: Any):
@@ -63,6 +70,22 @@ def ensure_set(arg: Optional[Collection], immutable: bool = True) -> AbstractSet
     """
     op = frozenset if immutable else set
     return op(arg) if arg is not None else op()
+
+
+def check_no_duplicates(arg: Optional[Collection]) -> Optional[Collection]:
+    """Check that the argument is a set."""
+    if arg is None:
+        return None
+    if isinstance(arg, AbstractSet):
+        return arg
+    seen = set()
+    for x in arg:
+        if x in seen:
+            raise ValueError(
+                f"duplicate element in collection {list(map(str, arg))}: '{str(x)}'"
+            )
+        seen.add(x)
+    return arg
 
 
 def ensure_sequence(arg: Optional[Sequence], immutable: bool = True) -> Sequence:
@@ -145,12 +168,8 @@ class RegexConstrainedString(str):
         )
 
 
-def find_cycle(graph: Dict[str, Optional[str]]) -> Optional[Sequence[str]]:
-    """
-    Check whether a graph (represented as a dictionary-based adjacency list) has a cycle.
-
-    This implementation assumes the constraint that each node has at most one successor.
-    """
+def find_cycle(graph: Dict[str, Optional[AbstractSet[str]]]) -> Optional[Sequence[str]]:
+    """Check whether a graph (represented as a dictionary-based adjacency list) has a cycle."""
     visited: Set = set()
     stack: List = []
 
@@ -164,8 +183,9 @@ def find_cycle(graph: Dict[str, Optional[str]]) -> Optional[Sequence[str]]:
                     return path
 
                 visited.add(current)
-                neighbor = graph.get(current)
-                if neighbor is not None:
-                    stack.append((neighbor, path + [current]))
+                neighbors = graph.get(current)
+                if neighbors is not None:
+                    for neighbor in neighbors:
+                        stack.append((neighbor, path + [current]))
 
     return None

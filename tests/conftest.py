@@ -12,6 +12,7 @@
 
 """This module contains the configurations for the tests."""
 import inspect
+import itertools
 from pathlib import Path
 
 import mistune
@@ -21,6 +22,7 @@ from pytest_lazyfixture import lazy_fixture
 import pddl
 from pddl.parser.domain import DomainParser
 from pddl.parser.problem import ProblemParser
+from pddl.parser.symbols import Symbols
 
 _current_filepath = inspect.getframeinfo(inspect.currentframe()).filename  # type: ignore
 TEST_DIRECTORY = Path(_current_filepath).absolute().parent
@@ -66,7 +68,14 @@ DOMAIN_FILES = [
     FIXTURES_PDDL_FILES / domain_name / "domain.pddl" for domain_name in DOMAIN_NAMES
 ]
 
-PROBLEM_FILES = [*FIXTURES_PDDL_FILES.glob("./**/p*.pddl")]
+PROBLEM_FILES = list(
+    itertools.chain(
+        *[
+            (FIXTURES_PDDL_FILES / domain_name).rglob("p*.pddl")
+            for domain_name in DOMAIN_NAMES
+        ]
+    )
+)
 
 
 @pytest.fixture(scope="session")
@@ -114,3 +123,21 @@ pddl_objects_problems = [
 ]
 
 #################################################
+
+
+# A set of symbols that can be matched as names but they are keywords
+# this is a subset of all symbols
+TEXT_SYMBOLS = {
+    Symbols.AND.value,
+    Symbols.DEFINE.value,
+    Symbols.DOMAIN.value,
+    Symbols.EITHER.value,
+    Symbols.EXISTS.value,
+    Symbols.FORALL.value,
+    Symbols.NOT.value,
+    Symbols.OBJECT.value,
+    Symbols.ONEOF.value,
+    Symbols.OR.value,
+    Symbols.PROBLEM.value,
+    Symbols.WHEN.value,
+}

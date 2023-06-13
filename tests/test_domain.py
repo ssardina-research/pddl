@@ -17,13 +17,15 @@ import re
 
 import pytest
 
-from pddl.constants import OBJECT
-from pddl.core import Action, Domain
+from pddl.action import Action
+from pddl.core import Domain
 from pddl.exceptions import PDDLValidationError
 from pddl.logic import Constant, Variable
 from pddl.logic.base import Not, TrueFormula
 from pddl.logic.helpers import constants, variables
 from pddl.logic.predicates import DerivedPredicate, Predicate
+from pddl.parser.symbols import Symbols
+from pddl.requirements import Requirements
 from tests.conftest import pddl_objects_domains
 
 
@@ -88,19 +90,23 @@ def test_cycles_in_type_defs_not_allowed() -> None:
     with pytest.raises(
         PDDLValidationError, match="cycle detected in the type hierarchy: A -> B -> C"
     ):
-        Domain("dummy", types={"A": "B", "B": "C", "C": "A"})
+        Domain(
+            "dummy",
+            requirements={Requirements.TYPING},
+            types={"A": "B", "B": "C", "C": "A"},
+        )
 
 
 def test_object_must_not_be_subtype() -> None:
     """Test that when the `object` type is used as subtype we raise error."""
     my_type = "my_type"
-    type_set = {OBJECT: my_type}
+    type_set = {Symbols.OBJECT.value: my_type}
 
     with pytest.raises(
         PDDLValidationError,
-        match=rf"object must not have supertypes, but got object is a subtype of {my_type}",
+        match=rf"object must not have supertypes, but got 'object' is a subtype of '{my_type}'",
     ):
-        Domain("test", types=type_set)  # type: ignore
+        Domain("test", requirements={Requirements.TYPING}, types=type_set)  # type: ignore
 
 
 def test_constants_type_not_available() -> None:
@@ -112,9 +118,9 @@ def test_constants_type_not_available() -> None:
 
     with pytest.raises(
         PDDLValidationError,
-        match=f"type 't1' of constant {re.escape(repr(a))} is not in available types {{'{my_type}'}}",
+        match=rf"types \['t1'\] of term {re.escape(repr(a))} are not in available types {{'{my_type}'}}",
     ):
-        Domain("test", constants={a}, types=type_set)  # type: ignore
+        Domain("test", requirements={Requirements.TYPING}, constants={a}, types=type_set)  # type: ignore
 
 
 def test_predicate_variable_type_not_available() -> None:
@@ -127,10 +133,9 @@ def test_predicate_variable_type_not_available() -> None:
 
     with pytest.raises(
         PDDLValidationError,
-        match=rf"type '(t1|t2)' of term {re.escape(repr(x))} in atomic expression {re.escape(repr(p))} is not in "
-        f"available types {{'{my_type}'}}",
+        match=rf"types \['t1', 't2'\] of term {re.escape(repr(x))} are not in available types {{'{my_type}'}}",
     ):
-        Domain("test", predicates={p}, types=type_set)  # type: ignore
+        Domain("test", requirements={Requirements.TYPING}, predicates={p}, types=type_set)  # type: ignore
 
 
 def test_action_parameter_type_not_available() -> None:
@@ -143,10 +148,9 @@ def test_action_parameter_type_not_available() -> None:
 
     with pytest.raises(
         PDDLValidationError,
-        match=rf"type '(t1|t2)' of term {re.escape(repr(x))} in atomic expression {re.escape(repr(action))} is not in "
-        f"available types {{'{my_type}'}}",
+        match=rf"types \['t1', 't2'\] of term {re.escape(repr(x))} are not in available types {{'{my_type}'}}",
     ):
-        Domain("test", actions={action}, types=type_set)  # type: ignore
+        Domain("test", requirements={Requirements.TYPING}, actions={action}, types=type_set)  # type: ignore
 
 
 def test_derived_predicate_type_not_available() -> None:
@@ -163,4 +167,4 @@ def test_derived_predicate_type_not_available() -> None:
         match=rf"type '(t1|t2)' of term {re.escape(repr(x))} in atomic expression {re.escape(repr(p))} is not in "
         f"available types {{'{my_type}'}}",
     ):
-        Domain("test", derived_predicates={dp}, types=type_set)  # type: ignore
+        Domain("test", requirements={Requirements.TYPING}, derived_predicates={dp}, types=type_set)  # type: ignore

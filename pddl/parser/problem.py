@@ -16,7 +16,7 @@ from typing import Dict
 
 from lark import Lark, ParseError, Transformer
 
-from pddl.core import Problem, Requirements
+from pddl.core import Problem
 from pddl.helpers.base import assert_
 from pddl.logic.base import And, Not
 from pddl.logic.predicates import EqualTo, Predicate
@@ -24,6 +24,7 @@ from pddl.logic.terms import Constant
 from pddl.parser import PARSERS_DIRECTORY, PROBLEM_GRAMMAR_FILE
 from pddl.parser.domain import DomainTransformer
 from pddl.parser.symbols import Symbols
+from pddl.requirements import Requirements
 
 
 class ProblemTransformer(Transformer):
@@ -57,7 +58,7 @@ class ProblemTransformer(Transformer):
         """Process the 'problem_domain' rule."""
         return "domain_name", args[2]
 
-    def requirements(self, args):
+    def problem_requirements(self, args):
         """Process the 'requirements' rule."""
         return "requirements", {Requirements(r[1:]) for r in args[2:-1]}
 

@@ -15,9 +15,16 @@ import functools
 from typing import AbstractSet, Collection, Optional
 
 from pddl.custom_types import name as name_type
-from pddl.custom_types import namelike, to_names
-from pddl.helpers.base import assert_, ensure_set
+from pddl.custom_types import namelike, parse_name, to_type
+from pddl.helpers.base import assert_, check_no_duplicates, ensure_set
 from pddl.helpers.cache_hash import cache_hash
+
+
+def _print_tag_set(type_tags: AbstractSet[name_type]) -> str:
+    """Print a tag set."""
+    if len(type_tags) == 0:
+        return "[]"
+    return repr(sorted(map(str, type_tags)))
 
 
 @cache_hash
@@ -26,19 +33,20 @@ class Term:
     """A term in a formula."""
 
     def __init__(
-        self, name: namelike, type_tags: Optional[Collection[namelike]] = None
+        self, term_name: namelike, type_tags: Optional[Collection[namelike]] = None
     ):
         """
         Initialize a term.
 
-        :param name: the name for the term.
+        :param term_name: the name for the term.
         :param type_tags: the type tags associated to this term.
         """
-        self._name = name_type(name)
-        self._type_tags = set(to_names(ensure_set(type_tags)))
+        assert_(type(self) is not Term, "Term is an abstract class")
+        self._name = parse_name(term_name)
+        self._type_tags = frozenset(to_type(ensure_set(check_no_duplicates(type_tags))))  # type: ignore
 
     @property
-    def name(self) -> str:
+    def name(self) -> name_type:
         """Get the name."""
         return self._name
 

@@ -10,7 +10,4 @@
 # https://opensource.org/licenses/MIT.
 #
 
-"""Module for library-wide constants, e.g. keywords."""
-
-EITHER = "either"
-OBJECT = "object"
+"""Test parsing functions."""

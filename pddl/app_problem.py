@@ -3,7 +3,7 @@ from textwrap import indent
 from typing import AbstractSet, Collection, Optional
 from pddl.core import Domain, Problem, Requirements
 from pddl.custom_types import namelike
-from pddl.formatter import _print_objects_constants_with_types, _remove_empty_lines, _sort_and_print_collection
+from pddl.formatter import _print_constants, _remove_empty_lines, _sort_and_print_collection
 from pddl.helpers.base import ensure, ensure_set
 from pddl.logic.base import Formula, TrueFormula
 from pddl.logic.terms import Constant
@@ -54,7 +54,8 @@ class APPProblem(Problem):
         result = f"(define (planprog {self.name})"
         body = f"(:domain {self.domain_name})\n"
         indentation = " " * 4
-        body += f"(:objects {_print_objects_constants_with_types(self.objects)})\n"
+        body += _print_constants("(:objects", self.objects, ")\n")
+        # body += f"(:objects {_print_objects_constants_with_types(self.objects)})\n"
         body += _sort_and_print_collection("(:init ", self.init, ")\n")
         body += f"(:init-app {self.init_app})\n"
         body += f"(:transitions \n" 
