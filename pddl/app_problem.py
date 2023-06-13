@@ -51,7 +51,7 @@ class APPProblem(Problem):
     
     def __str__(self) -> str:
         """String representation for APP problem."""
-        result = f"(define (planprob {self.name})"
+        result = f"(define (planprog {self.name})"
         body = f"(:domain {self.domain_name})\n"
         indentation = " " * 4
         body += f"(:objects {_print_objects_constants_with_types(self.objects)})\n"
