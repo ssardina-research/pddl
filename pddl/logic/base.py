@@ -61,7 +61,7 @@ class BinaryOp(Formula):
 
     def __str__(self) -> str:
         """Get the string representation."""
-        return f"({self.SYMBOL} {' '.join(map(str, self.operands))})"
+        return f"({self.SYMBOL} {' '.join(sorted(map(str, self.operands)))})"
 
     def __repr__(self) -> str:
         """Get an unambiguous string representation."""
