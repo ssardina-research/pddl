@@ -42,3 +42,11 @@ def parse_problem(fn):
     with open(fn, "r") as f:
         ptext = f.read()
     return ProblemParser()(ptext)
+
+
+def parse_domain_problem(fn):
+    from pddl.parser.domprob import DomProbParser
+
+    with open(fn, "r") as f:
+        ptext = f.read()
+    return DomProbParser()(ptext)
