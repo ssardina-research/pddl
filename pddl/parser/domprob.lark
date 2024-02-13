@@ -1,51 +1,11 @@
-start: domprob
-
-// We overrride the problem grammar from the original pddl package
-// we used to extend but this means we accept boths, which is not the case: we do not use planning problems
-domprob:        domain problem
+start: domain_start problem_start
 
 %ignore /\s+/
+
 %ignore COMMENT
 
-%import domain.domain -> domain
-%import problem.problem -> problem
+%import .domain.start -> domain_start
+%import .problem.start -> problem_start
 
 %import common.COMMENT -> COMMENT
-
-
-%import domain.DEFINE -> DEFINE
-%import domain.LPAR -> LPAR
-%import domain.RPAR -> RPAR
-%import domain.DOMAIN -> DOMAIN
-%import domain.NAME -> NAME
-%import domain.requirements -> requirements
-%import domain.PREDICATES -> PREDICATES
-%import domain.ACTION -> ACTION
-// %import domain.typed_list_name -> typed_list_name
-%import domain.atomic_formula_skeleton -> atomic_formula_skeleton
-%import domain.atomic_formula_name -> atomic_formula_name
-%import domain.gd -> gd
-%import domain.variable -> variable
-
-
-// %import domain.types -> types
-%import problem (problem, gd_name)
-%import problem.literal_name -> literal_name
-%import problem.atomic_formula_name -> atomic_formula_name
-%import problem.predicate -> predicate
-%import problem.typed_list_name -> typed_list_name
-%import problem.objects -> objects
-%import problem.goal -> goal
-%import problem.init -> init
-%import problem.init_el -> init_el
-%import problem.problem_domain -> problem_domain
-
-
-
-
-// .domain -> domain
-// // %import domain.predicates-> predicates
-
-
-// %import common.NAME -> NAME
 

@@ -332,39 +332,3 @@ class Problem:
             and self.metric == other.metric
         )
 
-
-
-class DomainProblem():
-    def __init__(
-        self,
-        domain: Optional[Domain] = None,
-        problem: Optional[Problem] = None,
-    ):
-        """
-        Initialize the PDDL problem.
-
-        :param domain: the PDDL domain.
-        :param problem: the PDDL problem.
-        """
-        self._domain: Optional[Domain] = domain
-        self._problem: Optional[Problem] = problem
-        self._domain_name: name_type
-        self._problem_name : name_type
-
-    def __str__(self) -> str:
-        """String representation for a Domain + Problem problem."""
-        result = ''
-        if self._domain is not None:
-            result += str(self._domain)
-        if self._problem is not None:
-            result += str(self._problem)
-
-        return result
-
-    def __eq__(self, other):
-        """Compare with another object."""
-        return (
-            isinstance(other, DomainProblem)
-            and self._domain == other._domain
-            and self._problem == other.problem
-        )

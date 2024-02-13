@@ -14,36 +14,30 @@ import sys
 import os
 from lark import Lark
 
-from pddl.core import DomainProblem
 from pddl.parser.domain import DomainTransformer
 from pddl.parser.problem import ProblemTransformer
 from pddl.helpers.base import assert_
+
+from lark.visitors import Transformer, merge_transformers
 
 from pddl.parser import DOMPROB_GRAMMAR_FILE, PARSERS_DIRECTORY
 
 # set the folder where the LARK grammar located (the other .lark files are the pddl project)
 
-class DomainProblemTransformer(DomainTransformer, ProblemTransformer):
+class DomainProblemTransformer(Transformer):
     """A transformer for domain + problems
     """
 
-    def __init__(self):
-        """Initialize the domain and problem transformers."""
-        super(DomainProblemTransformer, self).__init__()
-        super(ProblemTransformer, self).__init__()
+    def start(self, children):
+        # print(type(children))
+        print(children)
+        return children
 
-        self._domain_transformer = DomainTransformer()
+    def domain_start(self, children):
+        return children[0]
 
-    def start(self, args):
-        return args[0]
-
-    def domprob(self, args):
-        print(len(args))
-
-        # self.domain(args)
-        args = [arg for arg in args if arg is not None]
-        print(args)
-        return DomainProblem(**dict(args))
+    def problem_start(self, children):
+        return children[0]
 
 
 _parser_lark = DOMPROB_GRAMMAR_FILE.read_text()
@@ -53,7 +47,7 @@ class DomProbParser:
 
     def __init__(self):
         """Initialize."""
-        self._transformer = DomainProblemTransformer()
+        self._transformer = merge_transformers(DomainProblemTransformer(), domain=DomainTransformer(), problem=ProblemTransformer())
         # self._transformer = merge_transformers(APPTransformer(), domain=DomainTransformer(), problem=ProblemTransformer())
         # print(PARSERS_DIRECTORY)
         self._parser = Lark(

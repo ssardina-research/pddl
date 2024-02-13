@@ -14,7 +14,7 @@
 from textwrap import indent
 from typing import Callable, Collection, Dict, List, Optional, TypeVar
 
-from pddl.core import Domain, Problem, DomainProblem
+from pddl.core import Domain, Problem
 from pddl.custom_types import name
 from pddl.logic.functions import NumericFunction
 from pddl.logic.terms import Constant
@@ -187,8 +187,3 @@ def problem_to_string(problem: Problem) -> str:
     result = _remove_empty_lines(result)
     return result
 
-
-def domain_problem_to_string(domprop: DomainProblem) -> str:
-    """Print a PDDL problem object."""
-    result = domain_to_string(domprop._domain) + "\n" + problem_to_string(domprop._problem)
-    return result

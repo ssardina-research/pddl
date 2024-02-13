@@ -17,7 +17,7 @@ import sys
 import click
 
 from pddl import parse_domain, parse_problem, parse_domain_problem
-from pddl.formatter import domain_to_string, problem_to_string, domain_problem_to_string
+from pddl.formatter import domain_to_string, problem_to_string
 
 
 @click.group()
@@ -26,7 +26,6 @@ def cli():
 
 
 quiet_option = click.option("-q", "--quiet", is_flag=True, help="Don't print anything.")
-
 
 @cli.command()
 @click.argument("domain_file", type=click.Path(exists=True, dir_okay=False))
@@ -46,16 +45,23 @@ def problem(problem_file, quiet):
     if quiet:
         sys.stdout = open(os.devnull, "a")
     print(problem_to_string(parse_problem(problem_file)))
-    
+
 
 @cli.command()
 @click.argument("domprob_file", type=click.Path(exists=True, dir_okay=False))
 @quiet_option
 def domprob(domprob_file, quiet):
-    """Check a PDDL problem file is correct."""
+    """Check a PDDL domain + problem file is correct."""
     if quiet:
         sys.stdout = open(os.devnull, "a")
-    print(domain_problem_to_string(parse_domain_problem(domprob_file)))
+    domain, problem = parse_domain_problem(domprob_file)
+
+    if domain is not None:
+        print(domain_to_string(domain))
+    if problem is not None:
+        print(problem_to_string(problem))
+
+    # print(domain_problem_to_string())
 
 
 
