@@ -22,8 +22,7 @@ from lark.visitors import Transformer, merge_transformers
 
 from pddl.parser import DOMPROB_GRAMMAR_FILE, PARSERS_DIRECTORY
 
-# set the folder where the LARK grammar located (the other .lark files are the pddl project)
-
+_parser_lark = DOMPROB_GRAMMAR_FILE.read_text()
 
 class DomainProblemTransformer(Transformer):
     """A transformer for domain + problems"""
@@ -33,19 +32,15 @@ class DomainProblemTransformer(Transformer):
     #     super().__init__(*args, **kwargs)
 
     def start(self, children):
-        print("start", children)
         return children
 
     def domain_start(self, children):
-        print(children)
         return children[0]
 
     def problem_start(self, children):
-        print(children)
         return children[0]
 
 
-_parser_lark = DOMPROB_GRAMMAR_FILE.read_text()
 
 
 class DomProbParser:
@@ -59,10 +54,11 @@ class DomProbParser:
             problem=ProblemTransformer(),
         )
 
-        # self._parser = Lark.open(DOMPROB_GRAMMAR_FILE, rel_to=__file__)
 
+        # need to use earley; lalr will not be able to recognise files with just problems (no left)
+        # self._parser = Lark.open(DOMPROB_GRAMMAR_FILE, rel_to=__file__)
         self._parser = Lark(
-            _parser_lark, parser="lalr", import_paths=[PARSERS_DIRECTORY]
+            _parser_lark, parser="earley", import_paths=[PARSERS_DIRECTORY]
         )
 
     def __call__(self, text):
