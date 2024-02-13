@@ -18,8 +18,7 @@ import click
 
 from pddl import parse_domain, parse_problem, parse_domain_problem
 from pddl.formatter import domain_to_string, problem_to_string
-
-
+from pddl.core import Domain, Problem
 @click.group()
 def cli():
     """The unquestionable parser for PDDL 3.1."""  # noqa
@@ -54,12 +53,14 @@ def domprob(domprob_file, quiet):
     """Check a PDDL domain + problem file is correct."""
     if quiet:
         sys.stdout = open(os.devnull, "a")
-    domain, problem = parse_domain_problem(domprob_file)
 
-    if domain is not None:
-        print(domain_to_string(domain))
-    if problem is not None:
-        print(problem_to_string(problem))
+    result = parse_domain_problem(domprob_file)
+
+    for x in result:
+        if isinstance(x, Domain):
+            print(domain_to_string(x))
+        if isinstance(x, Problem):
+            print(problem_to_string(x))
 
     # print(domain_problem_to_string())
 

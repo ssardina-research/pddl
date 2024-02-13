@@ -24,39 +24,50 @@ from pddl.parser import DOMPROB_GRAMMAR_FILE, PARSERS_DIRECTORY
 
 # set the folder where the LARK grammar located (the other .lark files are the pddl project)
 
+
 class DomainProblemTransformer(Transformer):
-    """A transformer for domain + problems
-    """
+    """A transformer for domain + problems"""
+
+    # def __init__(self, *args, **kwargs):
+    #     """Initialize the domain transformer."""
+    #     super().__init__(*args, **kwargs)
 
     def start(self, children):
-        # print(type(children))
-        print(children)
+        print("start", children)
         return children
 
     def domain_start(self, children):
+        print(children)
         return children[0]
 
     def problem_start(self, children):
+        print(children)
         return children[0]
 
 
 _parser_lark = DOMPROB_GRAMMAR_FILE.read_text()
+
 
 class DomProbParser:
     """Domain and/or problem PDDL domain parser class."""
 
     def __init__(self):
         """Initialize."""
-        self._transformer = merge_transformers(DomainProblemTransformer(), domain=DomainTransformer(), problem=ProblemTransformer())
-        # self._transformer = merge_transformers(APPTransformer(), domain=DomainTransformer(), problem=ProblemTransformer())
-        # print(PARSERS_DIRECTORY)
+        self._transformer = merge_transformers(
+            DomainProblemTransformer(),
+            domain=DomainTransformer(),
+            problem=ProblemTransformer(),
+        )
+
+        # self._parser = Lark.open(DOMPROB_GRAMMAR_FILE, rel_to=__file__)
+
         self._parser = Lark(
             _parser_lark, parser="lalr", import_paths=[PARSERS_DIRECTORY]
         )
 
     def __call__(self, text):
         """Call the object as a function
-        Will return the object representing the parsed text/file which is an object 
+        Will return the object representing the parsed text/file which is an object
         of class pddl_parser.app_problem.APPProblem
 
         The call_parser() function is part of pddl package: will build a Tree from text and then an object pddl_parser.app_problem.APPProblem from the Tree
@@ -68,11 +79,10 @@ class DomProbParser:
         # this was actually the code in call_parser() function
         sys.tracebacklimit = 0  # noqa
         tree = self._parser.parse(text)
-        # print(tree)
+
         sys.tracebacklimit = None  # noqa
         formula = self._transformer.transform(tree)
         return formula
-
 
 
 if __name__ == "__main__":
